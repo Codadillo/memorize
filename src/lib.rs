@@ -335,7 +335,7 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let sig = func.sig.clone();
 
-    let out = quote! {
+    quote! {
         #sig {
             #func
 
@@ -346,9 +346,5 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
             #name(#(#func_arg_idents),*)
         }
     }
-    .into();
-
-    println!("{}", out);
-
-    out
+    .into()
 }
