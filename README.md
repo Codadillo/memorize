@@ -2,7 +2,7 @@
 `memorize` is a proc-macro crate which provides the attribute `#[memorize(...)]` to convert `const fn`s into lookup tables at compile time. Use wisely: beware premature optimization.
 
 ## Examples
-These examples are meant to show of `#[memorize(...)]` without necessasrily presenting useful applications.
+These examples are meant to show off `#[memorize(...)]` without necessasrily presenting useful applications.
 ```rust
 // For all x in -3..3, memorize the output of square
 #[memorize(domain = -3..3)]
