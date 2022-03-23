@@ -2,5 +2,20 @@
 name = "memorize"
 version = "0.1.0"
 edition = "2021"
+authors = ["Leo Conrad-Shah <singularlymappedtotheownzone@gmail.com>"]
+
+[lib]
+proc-macro = true
+
+[dev-dependencies]
+criterion = "0.3.5"
 
 [dependencies]
+proc-macro2 = "1.0.36"
+quote = "1.0.16"
+random-string = "1.0.0"
+syn = { version = "1.0.89", features = ["full"] }
+
+[[bench]]
+name = "bench_main"
+harness = false
