@@ -76,4 +76,17 @@ const fn tell_me_a_joke(desired_funniness: i32) -> &'static str {
         TIME CONSUMING"
     }
 }
+
+// You can use const generics too, but because const generics can only
+// literally appear in type position right now, you need to explicitely
+// supply the size of each const generic part of your domain. 
+// If you don't get the sizes right, bad things could happen silently.
+#[memorize(domain = (0..300, 0..N), format = (_, N))]
+const fn if_in_range<const N: usize>(what: usize, lower: usize) -> usize {
+    if lower <= what && what < N {
+        what
+    } else {
+        0
+    }
+}
 ```

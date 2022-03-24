@@ -110,8 +110,8 @@ fn bench_modinv(c: &mut Criterion) {
     // Now let's compare their performances outside of the memorized domain.
     //
     // The unmemorized version performs similarly to the range domain version.
-    // The array domain version performs much much worse because its O(n) check is 
-    // run through fully with no chance to short circuit. 
+    // The array domain version performs much much worse because its O(n) check is
+    // run through fully with no chance to short circuit.
     group_bench!(g, "!InDomain/Unmemorized", unmem_modinv(1..13, 13,));
     group_bench!(g, "!InDomain/Memorized/range", l_modinv_range(1..13, 13,));
     group_bench!(g, "!InDomain/Memorized/array", l_modinv_array(1..13, 13,));
