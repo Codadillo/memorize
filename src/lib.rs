@@ -39,6 +39,8 @@ mod kw {
     custom_keyword!(default);
 
     custom_keyword!(domain);
+
+    custom_keyword!(nonconst);
 }
 
 enum Format {
@@ -112,6 +114,7 @@ impl Parse for Domain {
 enum Argument {
     Format(Format),
     Domain(Vec<Domain>),
+    NonConst,
 }
 
 impl Parse for Argument {
@@ -136,7 +139,10 @@ impl Parse for Argument {
             } else {
                 Ok(Argument::Domain(vec![input.parse()?]))
             }
-        } else {
+        } else if lookahead.peek(kw::nonconst) {
+            input.parse::<kw::nonconst>()?;
+            Ok(Argument::NonConst)
+        }else {
             Err(lookahead.error())
         }
     }
@@ -146,18 +152,21 @@ struct Arguments {
     span: Span,
     format: Format,
     domain: Vec<Domain>,
+    nonconst: bool,
 }
 
 impl Parse for Arguments {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut format = Format::Default;
         let mut domain = None;
+        let mut nonconst = false;
 
         let raw_args: Punctuated<Argument, Token![,]> = input.parse_terminated(Argument::parse)?;
         for arg in raw_args {
             match arg {
                 Argument::Format(f) => format = f,
                 Argument::Domain(d) => domain = Some(d),
+                Argument::NonConst => nonconst = true,
             }
         }
 
@@ -166,6 +175,7 @@ impl Parse for Arguments {
                 span: input.span(),
                 format,
                 domain,
+                nonconst,
             }),
             None => Err(Error::new(
                 input.span(),
@@ -402,7 +412,10 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    let sig = func.sig.clone();
+    let mut sig = func.sig.clone();
+    if args.nonconst {
+        sig.constness = None;
+    }
 
     quote! {
         #sig {
