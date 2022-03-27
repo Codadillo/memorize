@@ -7,7 +7,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::Paren,
-    Error, Expr, FnArg, Ident, ItemFn, Pat, RangeLimits, Result, ReturnType, Token,
+    Error, Expr, FnArg, Generics, Ident, ItemFn, Pat, RangeLimits, Result, ReturnType, Token,
 };
 
 fn idents<const N: usize>(bases: [&str; N]) -> [Ident; N] {
@@ -41,6 +41,8 @@ mod kw {
     custom_keyword!(domain);
 
     custom_keyword!(nonconst);
+
+    custom_keyword!(gens);
 }
 
 enum Format {
@@ -114,6 +116,7 @@ impl Parse for Domain {
 enum Argument {
     Format(Format),
     Domain(Vec<Domain>),
+    AppendGenerics(Generics),
     NonConst,
 }
 
@@ -142,7 +145,12 @@ impl Parse for Argument {
         } else if lookahead.peek(kw::nonconst) {
             input.parse::<kw::nonconst>()?;
             Ok(Argument::NonConst)
-        }else {
+        } else if lookahead.peek(kw::gens) {
+            input.parse::<kw::gens>()?;
+            input.parse::<Token![=]>()?;
+
+            Ok(Argument::AppendGenerics(input.parse()?))
+        } else {
             Err(lookahead.error())
         }
     }
@@ -152,6 +160,7 @@ struct Arguments {
     span: Span,
     format: Format,
     domain: Vec<Domain>,
+    append_gens: Option<Generics>,
     nonconst: bool,
 }
 
@@ -159,6 +168,7 @@ impl Parse for Arguments {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut format = Format::Default;
         let mut domain = None;
+        let mut append_gens = None;
         let mut nonconst = false;
 
         let raw_args: Punctuated<Argument, Token![,]> = input.parse_terminated(Argument::parse)?;
@@ -166,6 +176,7 @@ impl Parse for Arguments {
             match arg {
                 Argument::Format(f) => format = f,
                 Argument::Domain(d) => domain = Some(d),
+                Argument::AppendGenerics(g) => append_gens = Some(g),
                 Argument::NonConst => nonconst = true,
             }
         }
@@ -175,6 +186,7 @@ impl Parse for Arguments {
                 span: input.span(),
                 format,
                 domain,
+                append_gens,
                 nonconst,
             }),
             None => Err(Error::new(
@@ -204,6 +216,8 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
+    let args: Arguments = syn::parse(attr).unwrap();
+
     let mut true_func_arg_idents = vec![];
     let mut func_arg_idents = vec![];
     let mut func_arg_types = vec![];
@@ -221,20 +235,23 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
             .into();
     }
 
-    let gens = func.sig.generics.clone();
+    let mut inner_func = func.clone();
+    if let Some(gens) = args.append_gens {
+        inner_func.sig.generics.params.extend(gens.params);
+    }
+
+    let gens = inner_func.sig.generics.clone();
     let gen_idents: Vec<_> = gens
         .params
         .iter()
         .filter_map(|p| match p {
             syn::GenericParam::Type(t) => Some(t.ident.clone()),
             syn::GenericParam::Const(c) => Some(c.ident.clone()),
-            syn::GenericParam::Lifetime(_) => None,
+            syn::GenericParam::Lifetime(_) => None, // todo
         })
         .collect();
 
     let name = func.sig.ident.clone();
-
-    let args: Arguments = syn::parse(attr).unwrap();
 
     let mut domain_func_args = vec![1; args.domain.len()];
     for (arg_count, domain) in domain_func_args.iter_mut().zip(&args.domain) {
@@ -419,7 +436,7 @@ pub fn memorize(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     quote! {
         #sig {
-            #func
+            #inner_func
 
             #(let #func_arg_idents = #true_func_arg_idents;)*
 
