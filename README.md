@@ -21,7 +21,7 @@ fn use_square() {
     }
 }
 
-// For all x in -3..3, for all y in -3..=3, memorize the output of scale_cube
+// For all x in -3..3, for all y in -3..=3, memorize the output of times
 #[memorize(domain = (-3..3, -3..=3))]
 const fn times(x: i32, y: i32) -> u32 {
     (x * y) as u32
